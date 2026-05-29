@@ -312,6 +312,15 @@
         .file-card-body { padding: 16px; display: none; border-top: 1px solid var(--border); }
         .file-card-body.open { display: block; }
 
+        /* Focus Tags */
+        .focus-tag {
+            display: inline-block; cursor: pointer; font-size: 12px; padding: 3px 10px;
+            border: 1px solid var(--border); border-radius: 14px; margin: 2px;
+            color: var(--text-secondary); background: #f6f8fa; user-select: none;
+        }
+        .focus-tag:has(input:checked) { background: #ddf4ff; color: var(--primary); border-color: var(--primary); }
+        .focus-cb { display: none; }
+
         /* Key Changes */
         .key-change {
             padding: 8px 14px;
@@ -375,6 +384,14 @@
                     评审完成后自动发布为 GitHub PR Comment（需配置 GITHUB_TOKEN）
                 </label>
             </div>
+            <div class="hint" style="margin-top:10px;">
+                <span style="font-size:13px;color:var(--text-secondary);margin-right:8px;">🔎 关注领域（可多选）:</span>
+                <label class="focus-tag"><input type="checkbox" value="security" class="focus-cb"> 安全</label>
+                <label class="focus-tag"><input type="checkbox" value="performance" class="focus-cb"> 性能</label>
+                <label class="focus-tag"><input type="checkbox" value="logic" class="focus-cb"> 逻辑</label>
+                <label class="focus-tag"><input type="checkbox" value="style" class="focus-cb"> 规范</label>
+                <label class="focus-tag"><input type="checkbox" value="maintainability" class="focus-cb"> 可维护</label>
+            </div>
         </div>
 
         <!-- Status -->
@@ -410,6 +427,8 @@
             document.getElementById('reportArea').innerHTML = '';
 
             const postComment = document.getElementById('postComment').checked;
+            const focusCbs = document.querySelectorAll('.focus-cb:checked');
+            const focusAreas = Array.from(focusCbs).map(cb => cb.value);
 
             try {
                 const resp = await fetch(`${API_BASE}/review`, {
@@ -418,6 +437,7 @@
                     body: JSON.stringify({
                         pr_url: prUrl,
                         include_file_context: true,
+                        focus_areas: focusAreas,
                         post_comment: postComment,
                     }),
                 });
