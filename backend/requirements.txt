@@ -1,0 +1,30 @@
+# AI PR Review 助手 - Python 依赖
+# Python >= 3.11
+
+# Web 框架
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# HTTP 客户端（GitHub API）
+httpx==0.28.1
+
+# AI / LLM
+openai==1.58.1
+
+# 模板渲染（前端）
+jinja2==3.1.4
+
+# 数据处理
+pydantic==2.10.3
+
+# 环境变量
+python-dotenv==1.0.1
+
+# Markdown 渲染（报告展示）
+markdown==3.7
+Pygments==2.18.0
+
+# 测试
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-mock==3.14.0
