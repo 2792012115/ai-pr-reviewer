@@ -212,7 +212,7 @@ pytest tests/ -v
 
 ## 🎥 Demo 演示视频
 
-👉 [B站观看完整演示](https://www.bilibili.com/video/BV1imVh6UEgf/)
+👉 [B站观看完整演示](https://www.bilibili.com/video/BV1ADV86ZEnP/)
 
 ---
 
