@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI PR Review 助手</title>
+    <style>
+        /* ============================================================
+           CSS Reset & Variables
+           ============================================================ */
+        :root {
+            --bg: #f6f8fa;
+            --card-bg: #ffffff;
+            --text: #24292e;
+            --text-secondary: #586069;
+            --border: #e1e4e8;
+            --primary: #0969da;
+            --primary-hover: #0550b3;
+            --danger: #d73a49;
+            --warning: #e36209;
+            --success: #28a745;
+            --info: #0366d6;
+            --radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                         'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ============================================================
+           Header
+           ============================================================ */
+        .header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            box-shadow: var(--shadow);
+        }
+        .header-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo { font-size: 24px; }
+        .header h1 { font-size: 22px; font-weight: 600; }
+        .header .badge {
+            font-size: 12px;
+            background: var(--primary);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        /* ============================================================
+           Main Layout
+           ============================================================ */
+        .container {
+            max-width: 1100px;
+            margin: 24px auto;
+            padding: 0 24px;
+        }
+
+        /* ============================================================
+           Input Card
+           ============================================================ */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .input-group .field { flex: 1; }
+        .field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+        }
+        .field input {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .field input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(9,105,218,0.15);
+        }
+
+        .btn {
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:disabled {
+            background: #8cbbf0;
+            cursor: not-allowed;
+        }
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+        .hint code {
+            background: #f0f0f0;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        /* ============================================================
+           Status Bar
+           ============================================================ */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .status-bar.loading {
+            background: #fff8e1;
+            border: 1px solid #ffd54f;
+            color: #6d4c00;
+        }
+        .status-bar.error {
+            background: #ffebee;
+            border: 1px solid #ef9a9a;
+            color: #b71c1c;
+        }
+        .status-bar.success {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            color: #1b5e20;
+        }
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid #ccc;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ============================================================
+           Report Sections
+           ============================================================ */
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+        }
+        .section h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        /* Risk Bar */
+        .risk-meter {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 12px 0;
+        }
+        .risk-bar-outer {
+            flex: 1;
+            height: 14px;
+            background: #e1e4e8;
+            border-radius: 7px;
+            overflow: hidden;
+        }
+        .risk-bar-inner {
+            height: 100%;
+            border-radius: 7px;
+            transition: width 0.6s ease;
+        }
+        .risk-score {
+            font-size: 28px;
+            font-weight: 700;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 2px;
+        }
+        .tag-critical { background: #ffebee; color: #b71c1c; }
+        .tag-high { background: #fff3e0; color: #c43e00; }
+        .tag-medium { background: #fff8e1; color: #795548; }
+        .tag-low { background: #e8f5e9; color: #1b5e20; }
+        .tag-info { background: #e3f2fd; color: #0d47a1; }
+
+        /* Issue Card */
+        .issue-card {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+        .issue-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: #f6f8fa;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .issue-header:hover { background: #eef0f2; }
+        .issue-body {
+            padding: 14px;
+            border-top: 1px solid var(--border);
+            font-size: 14px;
+            display: none;
+        }
+        .issue-body.open { display: block; }
+        .issue-body .desc { margin-bottom: 8px; color: var(--text); }
+        .issue-body .suggestion {
+            background: #f0f7ff;
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-top: 8px;
+            border-left: 3px solid var(--primary);
+        }
+        .issue-body pre {
+            background: #f6f8fa;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        /* File Card */
+        .file-card {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin: 12px 0;
+            overflow: hidden;
+        }
+        .file-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f6f8fa;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .file-card-header:hover { background: #eef0f2; }
+        .file-card-body { padding: 16px; display: none; border-top: 1px solid var(--border); }
+        .file-card-body.open { display: block; }
+
+        /* Key Changes */
+        .key-change {
+            padding: 8px 14px;
+            background: #f6f8fa;
+            border-radius: 6px;
+            margin: 4px 0;
+            font-size: 14px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .input-group { flex-direction: column; }
+            .container { padding: 0 12px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <span class="logo">🤖</span>
+            <h1>AI PR Review 助手</h1>
+            <span class="badge">Beta</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Input Card -->
+        <div class="card">
+            <div class="card-title">
+                <span>🔍</span> 输入 GitHub PR 链接开始评审
+            </div>
+            <div class="input-group">
+                <div class="field">
+                    <label for="prUrl">Pull Request URL</label>
+                    <input
+                        type="text"
+                        id="prUrl"
+                        placeholder="https://github.com/owner/repo/pull/123"
+                        autocomplete="off"
+                    />
+                </div>
+                <button class="btn btn-primary" id="reviewBtn" onclick="startReview()">
+                    🚀 开始评审
+                </button>
+            </div>
+            <div class="hint">
+                示例: <code>https://github.com/facebook/react/pull/25500</code>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div id="statusArea"></div>
+
+        <!-- Report -->
+        <div id="reportArea"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        AI PR Review 助手 · Powered by GPT-4o · XEngineer 2026
+    </div>
+
+    <script>
+        // ============================================================
+        // API 交互
+        // ============================================================
+        const API_BASE = '/api';
+
+        async function startReview() {
+            const prUrl = document.getElementById('prUrl').value.trim();
+            if (!prUrl) {
+                showStatus('请输入 GitHub PR 链接', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('reviewBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 评审中...';
+
+            showStatus('正在获取 PR 数据并进行分析，请稍候...', 'loading');
+            document.getElementById('reportArea').innerHTML = '';
+
+            try {
+                const resp = await fetch(`${API_BASE}/review`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pr_url: prUrl, include_file_context: true }),
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || `HTTP ${resp.status}`);
+                }
+
+                const data = await resp.json();
+                hideStatus();
+                renderReport(data);
+            } catch (e) {
+                showStatus(`评审失败: ${e.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 开始评审';
+            }
+        }
+
+        // Allow Enter key to trigger review
+        document.getElementById('prUrl').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') startReview();
+        });
+
+        // ============================================================
+        // 状态显示
+        // ============================================================
+        function showStatus(msg, type) {
+            const area = document.getElementById('statusArea');
+            const cls = type === 'error' ? 'error' : type === 'loading' ? 'loading' : 'success';
+            const spinner = type === 'loading' ? '<span class="spinner"></span>' : '';
+            area.innerHTML = `<div class="status-bar ${cls}">${spinner} ${msg}</div>`;
+        }
+
+        function hideStatus() {
+            document.getElementById('statusArea').innerHTML = '';
+        }
+
+        // ============================================================
+        // 报告渲染
+        // ============================================================
+        function renderReport(data) {
+            const area = document.getElementById('reportArea');
+            let html = '';
+
+            // --- PR Summary ---
+            if (data.pr_summary) {
+                html += '<div class="card section">';
+                html += '<h2>📋 PR 摘要</h2>';
+                html += `<p><strong>${escapeHtml(data.pr_summary.one_line_summary)}</strong></p>`;
+                html += `<p style="margin-top:8px;color:var(--text-secondary);">${escapeHtml(data.pr_summary.detailed_summary)}</p>`;
+
+                if (data.pr_summary.key_changes && data.pr_summary.key_changes.length) {
+                    html += '<h3 style="margin-top:16px;">关键变更</h3>';
+                    data.pr_summary.key_changes.forEach(kc => {
+                        html += `<div class="key-change">• ${escapeHtml(kc)}</div>`;
+                    });
+                }
+                html += '</div>';
+            }
+
+            // --- Overall Assessment ---
+            html += '<div class="card section">';
+            html += '<h2>🎯 整体评估</h2>';
+
+            const score = data.overall_risk_score || 0;
+            const color = riskColor(score);
+            html += `
+                <div class="risk-meter">
+                    <div class="risk-bar-outer">
+                        <div class="risk-bar-inner" style="width:${score * 10}%;background:${color};"></div>
+                    </div>
+                    <span class="risk-score" style="color:${color}">${score.toFixed(1)}</span>
+                    <span style="color:var(--text-secondary);font-size:13px;">/ 10</span>
+                </div>
+            `;
+            html += `<p style="margin-top:12px;">${escapeHtml(data.overall_assessment || '')}</p>`;
+
+            if (data.recommendations && data.recommendations.length) {
+                html += '<h3 style="margin-top:16px;">💡 全局建议</h3>';
+                data.recommendations.forEach(rec => {
+                    html += `<div class="key-change">• ${escapeHtml(rec)}</div>`;
+                });
+            }
+
+            // Meta
+            html += `<p style="margin-top:16px;font-size:12px;color:var(--text-secondary);">
+                模型: ${escapeHtml(data.model_used)} | 耗时: ${data.analysis_time_ms}ms
+            </p>`;
+            html += '</div>';
+
+            // --- File Reviews ---
+            if (data.file_reviews && data.file_reviews.length) {
+                html += '<div class="card section">';
+                html += '<h2>📁 文件评审详情</h2>';
+
+                data.file_reviews.forEach((fr, idx) => {
+                    const issueCount = fr.issues ? fr.issues.length : 0;
+                    const criticalCount = fr.issues ? fr.issues.filter(i => i.risk_level === 'critical').length : 0;
+                    const highCount = fr.issues ? fr.issues.filter(i => i.risk_level === 'high').length : 0;
+
+                    html += `<div class="file-card">`;
+                    html += `<div class="file-card-header" onclick="toggleFileCard(this)">
+                        <span>
+                            📄 <code>${escapeHtml(fr.filename)}</code>
+                            <span style="color:var(--text-secondary);font-size:12px;margin-left:8px;">
+                                风险 ${fr.risk_score.toFixed(1)}
+                            </span>
+                        </span>
+                        <span>
+                            ${criticalCount ? `<span class="tag tag-critical">🔴 ${criticalCount}</span>` : ''}
+                            ${highCount ? `<span class="tag tag-high">🟠 ${highCount}</span>` : ''}
+                            ${issueCount ? `<span style="font-size:12px;color:var(--text-secondary);">${issueCount} 问题</span>` : '<span style="color:var(--success);">✅ 无问题</span>'}
+                        </span>
+                    </div>`;
+                    html += `<div class="file-card-body">`;
+                    html += `<p>${escapeHtml(fr.summary)}</p>`;
+
+                    if (fr.issues && fr.issues.length) {
+                        fr.issues.forEach(issue => {
+                            const tagCls = `tag-${issue.risk_level}`;
+                            html += `<div class="issue-card">`;
+                            html += `<div class="issue-header" onclick="toggleIssue(this)">
+                                <span class="tag ${tagCls}">${issue.risk_level.toUpperCase()}</span>
+                                <span>${escapeHtml(issue.title)}</span>
+                                <span style="margin-left:auto;font-size:12px;color:var(--text-secondary);">
+                                    ${escapeHtml(issue.category)} · ${escapeHtml(issue.line_range)}
+                                </span>
+                            </div>`;
+                            html += `<div class="issue-body">
+                                <div class="desc">${escapeHtml(issue.description)}</div>`;
+                            if (issue.suggestion) {
+                                html += `<div class="suggestion"><strong>🔧 建议:</strong> ${escapeHtml(issue.suggestion)}</div>`;
+                            }
+                            if (issue.code_snippet) {
+                                html += `<pre>${escapeHtml(issue.code_snippet)}</pre>`;
+                            }
+                            html += `</div></div>`;
+                        });
+                    }
+                    html += `</div></div>`;
+                });
+                html += '</div>';
+            }
+
+            area.innerHTML = html;
+        }
+
+        // ============================================================
+        // 工具函数
+        // ============================================================
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function riskColor(score) {
+            if (score >= 7) return '#d73a49';
+            if (score >= 4) return '#e36209';
+            if (score >= 2) return '#dbab09';
+            return '#28a745';
+        }
+
+        function toggleIssue(header) {
+            const body = header.nextElementSibling;
+            body.classList.toggle('open');
+        }
+
+        function toggleFileCard(header) {
+            const body = header.nextElementSibling;
+            body.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>
