@@ -165,3 +165,81 @@ class GitHubClient:
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
+
+    # ---- PR Comment 发布 ----
+
+    async def post_review_comment(
+        self, pr_ref: PRReference, markdown_body: str
+    ) -> dict:
+        """
+        将评审报告作为 PR Comment 发布到 GitHub。
+        
+        使用 GitHub Issues API: POST /repos/{owner}/{repo}/issues/{number}/comments
+        
+        Returns:
+            dict: 创建的 comment 信息，含 html_url
+        Raises:
+            ValueError: 未配置 GitHub Token
+            httpx.HTTPStatusError: API 调用失败
+        """
+        if not self.token:
+            raise ValueError(
+                "发布 PR Comment 需要 GitHub Token。"
+                "请在 .env 中设置 GITHUB_TOKEN。"
+            )
+
+        comment_url = (
+            f"{self.base_url}/repos/{pr_ref.owner}/{pr_ref.repo}"
+            f"/issues/{pr_ref.pr_number}/comments"
+        )
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                comment_url,
+                headers=self._build_headers(),
+                json={"body": markdown_body},
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            logger.info(
+                f"已发布 PR Comment: {pr_ref.owner}/{pr_ref.repo}"
+                f"#{pr_ref.pr_number} → {result.get('html_url', 'N/A')}"
+            )
+            return result
+
+    async def post_review_comment_with_retry(
+        self, pr_ref: PRReference, markdown_body: str, max_retries: int = 3
+    ) -> dict:
+        """
+        带重试的 PR Comment 发布。
+        
+        遇到网络错误或 5xx 响应时自动重试，采用指数退避策略。
+        """
+        import asyncio
+
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                return await self.post_review_comment(pr_ref, markdown_body)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code >= 500:
+                    # 服务端错误，可重试
+                    last_error = e
+                    wait = 2 ** attempt
+                    logger.warning(
+                        f"GitHub API 5xx 错误 (尝试 {attempt + 1}/{max_retries})，"
+                        f"{wait}s 后重试..."
+                    )
+                    await asyncio.sleep(wait)
+                else:
+                    raise  # 4xx 不重试
+            except httpx.RequestError as e:
+                last_error = e
+                wait = 2 ** attempt
+                logger.warning(
+                    f"网络错误 (尝试 {attempt + 1}/{max_retries})，"
+                    f"{wait}s 后重试: {e}"
+                )
+                await asyncio.sleep(wait)
+
+        raise last_error or RuntimeError("PR Comment 发布失败")

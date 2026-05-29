@@ -369,6 +369,12 @@
             <div class="hint">
                 示例: <code>https://github.com/facebook/react/pull/25500</code>
             </div>
+            <div class="hint" style="margin-top:10px;display:flex;align-items:center;gap:6px;">
+                <input type="checkbox" id="postComment" style="width:16px;height:16px;cursor:pointer;">
+                <label for="postComment" style="cursor:pointer;font-size:13px;color:var(--text-secondary);">
+                    评审完成后自动发布为 GitHub PR Comment（需配置 GITHUB_TOKEN）
+                </label>
+            </div>
         </div>
 
         <!-- Status -->
@@ -403,11 +409,17 @@
             showStatus('正在获取 PR 数据并进行分析，请稍候...', 'loading');
             document.getElementById('reportArea').innerHTML = '';
 
+            const postComment = document.getElementById('postComment').checked;
+
             try {
                 const resp = await fetch(`${API_BASE}/review`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pr_url: prUrl, include_file_context: true }),
+                    body: JSON.stringify({
+                        pr_url: prUrl,
+                        include_file_context: true,
+                        post_comment: postComment,
+                    }),
                 });
 
                 if (!resp.ok) {
@@ -496,6 +508,15 @@
             html += `<p style="margin-top:16px;font-size:12px;color:var(--text-secondary);">
                 模型: ${escapeHtml(data.model_used)} | 耗时: ${data.analysis_time_ms}ms
             </p>`;
+            // Comment URL
+            if (data.comment_url) {
+                html += `<p style="margin-top:8px;padding:10px 14px;background:#e8f5e9;border-radius:6px;font-size:13px;">
+                    ✅ 评审报告已自动发布为 GitHub PR Comment：
+                    <a href="${escapeHtml(data.comment_url)}" target="_blank" style="color:var(--primary);">
+                        ${escapeHtml(data.comment_url)}
+                    </a>
+                </p>`;
+            }
             html += '</div>';
 
             // --- File Reviews ---
