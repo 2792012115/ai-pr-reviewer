@@ -106,7 +106,9 @@ async def review_pr(request: ReviewRequest):
 
     # 4. AI 评审
     try:
-        result = await ai_reviewer.review(pr_data, request.include_file_context)
+        result = await ai_reviewer.review(
+            pr_data, request.include_file_context, request.focus_areas or None
+        )
     except Exception as e:
         logger.error(f"AI 评审失败: {e}")
         return JSONResponse(

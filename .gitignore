@@ -39,5 +39,10 @@ logs/
 .coverage
 htmlcov/
 
+# Runtime artifacts
+review_history.json
+__pycache__/
+*.pyc
+
 # Node (if frontend uses npm)
 node_modules/
