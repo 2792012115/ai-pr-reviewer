@@ -13,9 +13,10 @@ import logging
 
 from config import config
 from models import ReviewRequest, ReviewResult, ReviewStatus
-from github_client import GitHubClient
+from github_client import GitHubClient, PRReference
 from ai_reviewer import AIReviewer
 from report_generator import ReportGenerator
+from review_history import save_review_record, get_review_history, get_trend_summary
 
 # ---- 日志 ----
 logging.basicConfig(
@@ -126,8 +127,32 @@ async def review_pr(request: ReviewRequest):
         f"耗时 {elapsed_ms}ms 风险评分 {result.overall_risk_score:.1f}"
     )
 
-    # 6. 转换为可序列化的字典返回
-    return _serialize_result(result)
+    # 6. 保存评审历史
+    try:
+        save_review_record(result, request.pr_url)
+    except Exception as e:
+        logger.warning(f"保存评审历史失败（不影响主流程）: {e}")
+
+    # 7. 发布 PR Comment（如果请求）
+    comment_url = ""
+    if request.post_comment:
+        try:
+            comment_md = report_generator.to_markdown(result)
+            comment_resp = await github_client.post_review_comment_with_retry(
+                pr_ref, comment_md
+            )
+            comment_url = comment_resp.get("html_url", "")
+            logger.info(f"评审报告已作为 PR Comment 发布: {comment_url}")
+        except ValueError as e:
+            logger.warning(f"无法发布 PR Comment: {e}")
+        except Exception as e:
+            logger.error(f"发布 PR Comment 失败: {e}")
+
+    # 8. 转换为可序列化的字典返回
+    serialized = _serialize_result(result)
+    if comment_url:
+        serialized["comment_url"] = comment_url
+    return serialized
 
 
 @app.get("/api/review/{owner}/{repo}/{pr_number}", response_model=dict)
@@ -137,6 +162,23 @@ async def review_pr_by_path(owner: str, repo: str, pr_number: int):
         pr_url=f"https://github.com/{owner}/{repo}/pull/{pr_number}"
     )
     return await review_pr(request)
+
+
+# ============================================================
+# 评审历史接口
+# ============================================================
+
+@app.get("/api/history")
+async def review_history(limit: int = 20):
+    """获取评审历史记录"""
+    records = get_review_history(limit)
+    return {"count": len(records), "records": records}
+
+
+@app.get("/api/trends")
+async def review_trends():
+    """获取评审趋势摘要"""
+    return get_trend_summary()
 
 
 # ============================================================

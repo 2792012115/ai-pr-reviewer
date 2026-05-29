@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
+from pydantic import BaseModel, Field
+
 
 # ============================================================
 # 枚举类型
@@ -33,15 +35,15 @@ class ReviewStatus(str, Enum):
 
 
 # ============================================================
-# 请求模型
+# 请求模型 (Pydantic, FastAPI 原生支持)
 # ============================================================
 
-@dataclass
-class ReviewRequest:
+class ReviewRequest(BaseModel):
     """评审请求"""
-    pr_url: str                              # GitHub PR URL
-    include_file_context: bool = True         # 是否附带文件上下文
-    focus_areas: list[str] = field(default_factory=list)  # 关注领域
+    pr_url: str = Field(..., description="GitHub PR URL")
+    include_file_context: bool = Field(True, description="是否附带文件上下文")
+    focus_areas: list[str] = Field(default_factory=list, description="关注领域")
+    post_comment: bool = Field(False, description="是否将评审报告发布为 PR Comment")
 
 
 # ============================================================
