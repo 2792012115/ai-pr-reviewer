@@ -206,6 +206,12 @@ pytest tests/ -v
 
 ---
 
+## 🎥 Demo 演示视频
+
+👉 [B站观看完整演示](https://www.bilibili.com/video/BV1imVh6UEgf/)
+
+---
+
 ## ⚖️ 开源协议
 
 MIT License
